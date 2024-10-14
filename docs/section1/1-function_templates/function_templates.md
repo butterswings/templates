@@ -137,5 +137,6 @@ std::complex<float> c1, c2;
 ::max(c1, c2); // compilation error
 ```
 
-> [!NOTE] 编译与链接，有时编译器需要在实例化时查看模板的定义
+> [!NOTE]
+> 编译与链接，有时编译器需要在实例化时查看模板的定义
 > Two-phase translation leads to an important problem in the handling of templates in practice: When a function template is used in a way that triggers its instantiation, a compiler will (at some point) need to see that template’s definition. This breaks the usual compile and link distinction for ordinary functions, when the declaration of a function is sufficient to compile its use. Methods of handling this problem are discussed in Chapter 9. For the moment, let’s take the simplest approach: Implement each template inside a header file.
