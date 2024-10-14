@@ -139,3 +139,57 @@ std::complex<float> c1, c2;
 
 > [!NOTE]
 > 编译与链接，有时编译器需要在实例化时查看模板的定义：Two-phase translation leads to an important problem in the handling of templates in practice: When a function template is used in a way that triggers its instantiation, a compiler will (at some point) need to see that template’s definition. This breaks the usual compile and link distinction for ordinary functions, when the declaration of a function is sufficient to compile its use. Methods of handling this problem are discussed in Chapter 9. For the moment, let’s take the simplest approach: Implement each template inside a header file.
+
+## 1.2.模板参数推导
+
+模板参数可能是参数类型的一部分，如参数类型声明为const reference
+
+```cpp
+template <typename T>
+T max(const T& a, const T& b)
+{
+  return b < a ? a : b;
+}
+```
+
+- 若传递int，T在此处推导为int，而参数a和b的类型为const int&
+
+类型推导时的类型转换
+
+1. 引用声明参数，简单转换(trivival)不适用于类型推导，同一模板参数声明的实参必须完全匹配
+
+2. 按值声明参数，去除顶层cv限定和引用，数组和函数类型转换为对应的指针，该转换事实上即为[`std::decay`](https://github.com/butterswings/tiny_stl/blob/main/docs/type_traits.md#decay)
+
+```cpp
+max(4, 7.2); // ERROR: T can be deduced as int or double
+
+template <typename T>
+void foo(T& a, T& b);
+
+std::string s;
+foo("hello", s); // ERROR: T can be deduced as char const[6] or std::string
+```
+
+修正：
+
+1. 将实参强转 `max(static_cast<double>(4), 7.2)`
+2. 显示指定模板参数，要求实参能够转换到T `max<double>(4, 7.2)`
+
+默认实参类型推导
+
+![deduction_for_default_template_param](../../../assets/section1/1-function_templates/deduction_for_default_template_param.png)
+
+为了使`f()`能够成功调用，需要同时给定模板参数默认类型以及函数参数列表默认实参
+
+```cpp
+template <typename _Tp = std::string>
+void f(_Tp = "") { }
+
+int main(int argc, char **argv)
+{
+  f(1);
+  f();
+
+  return 0;
+}
+```
