@@ -285,3 +285,61 @@ max(T1 a, T2 b)
   return b < a ? a : b;
 }
 ```
+
+## 1.4.默认模板参数
+
+before C++11，默认模板参数仅可在类模板中使用
+
+对于函数模板，可以在任意位置给定默认模板参数，但是对于类模板在第一个给出默认模板参数之后的每个参数都要求给定默认参数
+
+```cpp
+// ERROR: no default argument for B
+template <typename A = int, typename B /* A type */>
+struct test { };
+
+// OK
+template <typename A = void, typename B>
+A func(B) { }
+
+int main(int argc, char **argv)
+{
+  func(nullptr);
+
+  return 0;
+}
+```
+
+对上节返回值应用默认模板参数，此处`T1()`和`T2()`的使用要求两种类型均可默认构造，也可使用[`std::declval`](https://github.com/butterswings/tiny_stl/blob/main/docs/type_traits.md#declval)
+
+```cpp
+template <typename T1, typename T2,
+          typename Rt = std::decay_t<decltype(false ? T1() : T2())>>
+Rt max(T1 a, T2 b)
+{
+  return b < a ? a : b;
+}
+```
+
+或者
+
+```cpp
+template <typename T1, typename T2,
+          typename Rt = std::common_type_t<T1, T2>>
+Rt max(T1 a, T2 b)
+{
+  return b < a ? a : b;
+}
+```
+
+同前，如果此处我们需要手动指定返回值类型，则需要给定三个模板参数，这是*不可接受的*，可将`Rt`前置
+
+```cpp
+template <typename Rt = std::common_type_t<T1, T2>,
+          typename T1, typename T2>
+Rt max(T1 a, T2 b)
+{
+  return b < a ? a : b;
+}
+
+::max<int>(4, 42);
+```
