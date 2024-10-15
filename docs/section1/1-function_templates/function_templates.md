@@ -193,3 +193,95 @@ int main(int argc, char **argv)
   return 0;
 }
 ```
+
+## 1.3.多模板参数
+
+```cpp
+template <typename T1, typename T2>
+T1 max(T1 a, T2 b)
+{
+  return b < a ? a : b;
+}
+
+auto m = ::max(4, 7.2); // OK
+```
+
+- 返回值的类型依赖于第一个实参的类型，如何解决？
+  1. 为返回值引入额外的模板参数
+  2. 自动推导(`auto/decltype(auto)`)
+  3. `common_type`
+
+### 1.3.1.返回类型的模板参数
+
+对于函数模板参数的类型可以被推导，但仍然可以被显式指定
+
+```cpp
+template <typename T>
+T max(T a, T b);
+
+::max<double>(4, 7.2);
+```
+
+若模板参数与参数类型无关，无法通过推导确定，则必须显式指定
+
+```cpp
+template <typename T1, typename T2, typename Rt>
+Rt max(T1 a, T2 b);
+
+::max<int, double, double>(4, 7.2);
+```
+
+很显然，手动提供所有函数模板的模板参数是不可接受的，可以考虑将类型`Rt`前置，从而提供`Rt`，推导`T1`和`T2`
+
+```cpp
+template <typename Rt, typename T1, typename T2>
+Rt max(T1 a, T2 b);
+
+::max<double>(4, 7.2);
+```
+
+### 1.3.2.推导返回类型
+
+since C++14可以直接使用`auto`推导返回值，而不必尾置返回值
+
+如果由有多个`return`语句则必须保证所有返回值类型均一致
+
+```cpp
+// C++14
+template <typename T1, typename T2>
+auto max(T1 a, T2 b)
+{
+  return b < a ? a : b;
+}
+```
+
+C++11，`auto`推导返回值还没这么智能，仍然需要尾置返回值类型，在此处可以使用三元运算符确认返回值类型，其中`decltype`括号内为不求值语句，此处条件可以任意
+
+```cpp
+// C++11
+template <typename T1, typename T2>
+auto max(T1 a, T2 b) -> decltype(false ? a : b)
+{
+  return b < a ? a : b;
+}
+```
+
+某些情况下，C++11推导返回值可能会被推导为引用类型，但是此处返回的是`prvalue`，应对返回值decay，将箭头后的返回类型更正为`std::decay_t<decltype(false ? a : b)>`
+
+对于C++14，则不存在这样的问题，其返回类型始终是`decay`的
+
+[C++14-auto推导返回值规则同1.2节decay](https://github.com/butterswings/tiny_stl/blob/main/docs/type_traits.md#decay)
+
+### 1.3.3.返回common_type
+
+since C++11，标准库提供类模板[`common_type`](https://github.com/butterswings/tiny_stl/blob/main/docs/type_traits.md#common_type)以计算公共类型，注意`common_type`内部也使用三元运算符进行类型计算，并且会对类型应用`decay`
+
+```cpp
+template <typename T1, typename T2>
+typename std::common_type<T1, T2>::type
+// std::common_type_t<T1, T2>
+max(T1 a, T2 b)
+{
+  return b < a ? a : b;
+}
+```
