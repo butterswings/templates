@@ -207,3 +207,66 @@ requires std::default_initializable
 class C
 { /* ... */ };
 ```
+
+## 2.4.友元
+
+2.3节，为类模板`Stack`实现了一个打印的成员函数，不如实现`operator<<`，通常其为友元函数
+
+```cpp
+template <typename T>
+class Stack
+{
+public:
+  friend std::ostream& operator<<(std::ostream& strm, const Stack& s)
+  {
+    s.printOn(strm);
+    return strm;
+  }
+  // ...
+};
+```
+
+> [!NOTE]
+> `Stack<>`的`operator<<`，并不是一个函数模板，而是一个在被使用时伴随模板类实例化生成的“普通”函数
+---
+> [!IMPORTANT]
+> 这里是***声明并定义友元函数***，与下文***声明，稍后实现友元函数***不同
+
+如果要先声明友元函数，稍后再进行实现，则会有些复杂
+
+- 隐式声明一个新的函数模板，但要使用不同的模板参数
+
+```cpp
+template<typename T>
+class Stack
+{
+  // ...
+  template<typename U>
+  friend std::ostream& operator<<(std::ostream&, Stack<U> const&);
+};
+```
+
+- 将为`Stack<T>`编写的`operator<<`前向声明为函数模板，这同时意味着我们要前向声明类模板，在声明友元时需要使用`<>`表明是函数模板
+
+```cpp
+// forward declarations
+template<typename T>
+class Stack;
+template<typename T>
+std::ostream& operator<<(std::ostream&, Stack<T> const&);
+
+template<typename T>
+class Stack
+{
+  // ...
+  friend std::ostream& operator<< <T>(std::ostream&, Stack<T> const&);
+  
+  // equal to
+  // note: (if this is not what you intended,
+  // make sure the function template has already been declared
+  // and add '<>' after the function name here)
+  friend std::ostream& operator<< <>(std::ostream&, Stack const&)
+};
+```
+
+这节友元好混乱，原书描述更是抽象，后面仍有章节专门讲述友元，或许不必担心
