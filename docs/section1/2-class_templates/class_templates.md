@@ -265,7 +265,7 @@ class Stack
   // note: (if this is not what you intended,
   // make sure the function template has already been declared
   // and add '<>' after the function name here)
-  friend std::ostream& operator<< <>(std::ostream&, Stack const&)
+  friend std::ostream& operator<< <>(std::ostream&, Stack const&);
 };
 ```
 
