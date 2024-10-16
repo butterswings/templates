@@ -343,3 +343,173 @@ Rt max(T1 a, T2 b)
 
 ::max<int>(4, 42);
 ```
+
+## 1.5.重载函数模板
+
+[重载决议](https://en.cppreference.com/w/cpp/language/overload_resolution)
+
+优先级：普通函数 > 特化 > 模板
+
+```cpp
+int max (int a, int b)
+{
+  return  b < a ? a : b;
+}
+
+// maximum of two values of any type:
+template<typename T>
+T max (T a, T b)
+{
+  return  b < a ? a : b;
+}
+
+int main()
+{
+  ::max(7, 42);          // calls the nontemplate for two ints
+  ::max(7.0, 42.0);      // calls max<double> (by argument deduction)
+  ::max('a', 'b');       // calls max<char> (by argument deduction)
+  ::max<>(7, 42);        // calls max<int> (by argument deduction)
+  ::max<double>(7, 42);  // calls max<double> (no argument deduction)
+  ::max('a', 42.7);      // calls the nontemplate for two ints
+}
+```
+
+1. `::max(7, 42)`优先匹配普通函数
+2. `::max(7.0, 42.0)`，普通函数不是最佳匹配，从模板生成
+3. `::max('a', 'b')`，普通函数不是最佳匹配，从模板生成
+4. `::max<>(7, 42)`，显式指定使用模板函数
+5. `::max<double>(7, 42)`，显式指定使用`::max<double>`
+6. `::max('a', 42)`，推导的模板参数不进行类型转换，会进行从实参到普通函数参数的类型转换，所以会调用普通函数
+
+重载函数模板时，应确保不会产生歧义
+
+```cpp
+template <typename T1, typename T2>
+auto max(T1 a, T2 b);
+
+template <typename Rt, typename T1, typename T2>
+Rt max(T1 a, T2 b);
+
+auto a = ::max(4, 7.2); // uses first template
+auto b = ::max<long double>(7.2, 4); // uses second template
+
+// ERROR: ambiguous
+// match two templates
+auto c = ::max<int>(4, 7.2);
+```
+
+一个有效的例子：
+
+```cpp
+// maximum of two values of any type:
+template<typename T>
+T max (T a, T b)
+{
+  return  b < a ? a : b;
+}
+
+// maximum of two pointers:
+template<typename T>
+T* max (T* a, T* b)
+{
+  return  *b < *a  ? a : b;
+}
+
+// maximum of two C-strings:
+char const* max (char const* a, char const* b)
+{
+  return  std::strcmp(b, a) < 0  ? a : b;
+}
+
+int main ()
+{
+  int a = 7;
+  int b = 42;
+  auto m1 = ::max(a, b);     // max() for two values of type int
+
+  std::string s1 = "hey";
+  std::string s2 = "you";
+  auto m2 = ::max(s1, s2);   // max() for two values of type std::string
+
+  int* p1 = &b;
+  int* p2 = &a;
+  auto m3 = ::max(p1, p2);   // max() for two pointers
+
+  char const* x = "hello";
+  char const* y = "world";
+  auto m4 = ::max(x, y);     // max() for two C-strings
+}
+```
+
+上述例子中的参数均按值进行传递，假使其中存在`const T&`的重载则可能发生严重的问题
+
+```cpp
+// maximum of two values of any type (call-by-reference)
+template<typename T>
+T const& max (T const& a, T const& b)
+{
+  return  b < a ? a : b;
+}
+
+// maximum of two C-strings (call-by-value)
+char const* max (char const* a, char const* b)
+{
+  return  std::strcmp(b, a) < 0  ? a : b;
+}
+
+// maximum of three values of any type (call-by-reference)
+template<typename T>
+T const& max (T const& a, T const& b, T const& c)
+{
+  return max (max(a, b), c);       // error if max(a,b) uses call-by-value
+}
+
+int main ()
+{
+  auto m1 = ::max(7, 42, 68);     // OK
+
+  char const* s1 = "frederic";
+  char const* s2 = "anica";
+  char const* s3 = "lucas";
+  auto m2 = ::max(s1, s2, s3);    // run-time ERROR
+}
+```
+
+为什么`::max(7, 42, 68)`行为正常？
+
+- 因为在其整个调用过程中，始终返回的是原对象的引用，而***该引用是绑定到`main`函数中创建的临时对象上，其生命周期一直持续到语句结束***
+
+为什么`::max(s1, s2, s3)`run time error？
+
+- 问题发生在`max(a, b)`的重载选择上，由于普通函数更加匹配，但是三元运算符返回了临时对象(指针的一份拷贝)，在最后返回到`main`函数时造成了悬置引用
+
+在进行函数调用时并非所有名字均可见，涉及`ADL`等名字查找概念，后续见第13章
+
+```cpp
+// maximum of two values of any type:
+template<typename T>
+T max (T a, T b)
+{
+  std::cout << "max<T>() \n";
+  return  b < a ? a : b;
+}
+
+// maximum of three values of any type:
+template<typename T>
+T max (T a, T b, T c)
+{
+  return max (max(a, b), c);  // uses the template version even for ints
+}                            // because the following declaration comes 
+                             // too late:
+// maximum of two int values:
+int max (int a, int b)
+{
+  std::cout << "max(int,int) \n";
+  return  b < a ? a : b;
+}
+
+int main()
+{
+  ::max(47, 11, 33);  // OOPS: uses max<T>() instead of max(int,int)
+}
+```
