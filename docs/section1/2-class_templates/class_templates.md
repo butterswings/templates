@@ -270,3 +270,64 @@ class Stack
 ```
 
 这节友元好混乱，原书描述更是抽象，后面仍有章节专门讲述友元，或许不必担心
+
+## 2.5.类模板特化
+
+类模板特化允许特定类型的实现，或者为模板实例化修复特定类型的错误行为
+
+如果特化模板类则必须特化所有成员函数，虽然也可以只特化某些成员，但这样做会带来不再可以特化该类型的类模板的后果
+
+![partialize_class_template_mem_fn](../../../assets/section1/2-class_templates/partialize_class_template_mem_fn.png)
+
+> [!NOTE]
+> 只特化部分成员函数要有`template <>`(***指定特定类型类模板实例的成员函数***)，特化的类模板外实现成员函数不需要(“***普通的函数***”)
+---
+> [!TIP]
+> 或者简单点说，前者类模板未特化，后者类模板已经特化
+
+以前节`Stack`类模板为例
+
+对于这些特化,***成员函数的定义必须是一个“普通的”成员函数***，每次出现`T`都会使用特化类型替换，类外定义：
+
+```cpp
+void Stack<std::string>::push(std::string const& elem)
+{
+  elems.push_back(elem); // append copy of passed elem
+}
+```
+
+类内定义仍正常，但其实跟类外定义差不多，类名指代以当前模板参数作为实参的类型
+
+```cpp
+template <>
+class Stack<std::string>
+{
+private:
+  std::deque<std::string> elems; // elements
+public:
+  void push(std::string const &); // push element
+  void pop();                     // pop element
+  std::string const &top() const; // return top element
+  bool empty() const
+  { // return whether the stack is empty
+      return elems.empty();
+  }
+};
+
+void Stack<std::string>::push(std::string const& elem)
+{
+  elems.push_back(elem); // append copy of passed elem
+}
+
+void Stack<std::string>::pop()
+{
+  assert(!elems.empty());
+  elems.pop_back(); // remove last element
+}
+
+std::string const &Stack<std::string>::top() const
+{
+  assert(!elems.empty());
+  return elems.back(); // return copy of last element
+}
+```
