@@ -160,3 +160,50 @@ Stack<Stack<int>> intStackStack; // stack of stack of ints
 ```
 
 before C++11，`>>`是非法的，since C++11该问题已经被hack
+
+## 2.3.部分使用类模板`Stack`
+
+类模板通常会对它的模板实参应用多种操作，如构造和析构，这或许让我们觉得模板实参必须保证所有操作都是支持的，事实上模板实参仅要保证必要操作即可
+
+例如输出`Stack`类模板持有的所有元素，未受`operator<<`支持的类型不使用该成员函数`printOn`代码就不会出错，但仍然可以使用其他成员函数
+
+```cpp
+template <typename T>
+void Stack<T>::printOn(std::ostream& strm) const
+{
+  for (const T& elem : elems)
+    strm << elem << ' ';
+}
+```
+
+### 2.3.1.`concepts`(概念)
+
+如何约束模板需要满足哪些条件才能实例化？比如约束类型支持默认构造
+
+- 静态断言，功能简单缺乏类型推导
+
+```cpp
+template <typename T>
+class C
+{
+  static_assert(std::is_default_constructible<T>::value);
+};
+```
+
+- SFINAE，复杂type_traits和晦涩的语法
+
+```cpp
+template <typename T,
+          typename = std::enable_if_t<std::is_default_constructible_v<T>>>
+class C
+{ /* ... */ };
+```
+
+- 概念与约束：良好的错误诊断与代码风格，C++20带来的福音
+
+```cpp
+template <typename T>
+requires std::default_initializable
+class C
+{ /* ... */ };
+```
