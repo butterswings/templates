@@ -280,14 +280,14 @@ class Stack
 ![partialize_class_template_mem_fn](../../../assets/section1/2-class_templates/partialize_class_template_mem_fn.png)
 
 > [!NOTE]
-> 只特化部分成员函数要有`template <>`(***指定特定类型类模板实例的成员函数***)，特化的类模板外实现成员函数不需要(“***普通的函数***”)
+> 只特化部分成员函数要有`template <>`(***指定特定类型类模板实例的成员函数***)，特化的类模板外实现成员函数不需要(“***“普通的”函数***”)
 ---
 > [!TIP]
 > 或者简单点说，前者类模板未特化，后者类模板已经特化
 
 以前节`Stack`类模板为例
 
-对于这些特化,***成员函数的定义必须是一个“普通的”成员函数***，每次出现`T`都会使用特化类型替换，类外定义：
+对于这些特化,***成员函数的定义必须是一个“普通的”成员函数***，类外定义：
 
 ```cpp
 void Stack<std::string>::push(std::string const& elem)
@@ -296,7 +296,7 @@ void Stack<std::string>::push(std::string const& elem)
 }
 ```
 
-类内定义仍正常，但其实跟类外定义差不多，类名指代以当前模板参数作为实参的类型
+类内定义仍正常：
 
 ```cpp
 template <>
