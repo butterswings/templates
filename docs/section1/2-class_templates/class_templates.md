@@ -331,3 +331,48 @@ std::string const &Stack<std::string>::top() const
   return elems.back(); // return copy of last element
 }
 ```
+
+## 2.6.偏特化
+
+```cpp
+template <typename T>
+class Stack<T*>
+{
+private:
+  std::vector<T*> elems;
+public:
+  // ...
+}
+```
+
+这个偏特化的类模板处理了所有裸指针的情形
+
+多个参数的偏特化
+
+```cpp
+template <typename T1, typename T2>
+class MyClass { /* ... */ };
+
+template <typename T>
+class MyClass<T, T> { /* ... */ };
+
+template <typename T>
+class MyClass<T, int> { /* ... */ };
+
+template <typename T1, typename T2>
+class MyClass<T1*, T2*> { /* ... */ };
+
+MyClass<int,float> mif; // uses MyClass<T1,T2>
+MyClass<float,float> mff; // uses MyClass<T,T>
+MyClass<float,int> mfi; // uses MyClass<T,int>
+MyClass<int*,float*> mp; // uses MyClass<T1*,T2*>
+```
+
+多个特化匹配则会有歧义
+
+```cpp
+MyClass<int, int> m1;   // match MyClass<T, T> and MyClass<T, int>
+MyClass<int*, int*> m2; // match MyClass<T, T> and MyClass<T1*, T2*>
+```
+
+对于第二个歧义例子可以特化`MyClass<T*, T*>`来解决歧义
