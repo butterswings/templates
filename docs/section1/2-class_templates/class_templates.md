@@ -412,3 +412,41 @@ void Stack<T, Container>::push(const T& elem)
 ```cpp
 Stack<double, std::deque<double>> s;
 ```
+
+## 2.8.类型别名(alias)
+
+typedef
+
+```cpp
+typedef Stack<int> IntStack;
+```
+
+since C++11, keyword using
+
+```cpp
+using IntStack = Stack<int>;
+```
+
+别名模板，仅using
+
+```cpp
+template <typename T>
+using DequeStack = Stack<T, std::deque<T>>;
+```
+
+成员类型的别名模板
+
+```cpp
+template <typename _Tp>
+struct remove_const
+{ using type = _Tp; };
+
+template <typename _Tp>
+struct remove_const<const _Tp>
+{ using type = _Tp; };
+
+template <typename _Tp>
+using remove_const_t = typename remove_const<_Tp>::type;
+```
+
+这样就不必`typename remove_const<>::type`而直接`remove_const_t<>`
