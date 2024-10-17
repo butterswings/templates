@@ -287,6 +287,12 @@ class Stack
 
 以前节`Stack`类模板为例
 
+```cpp
+template <>
+class Stack<std::string>
+{ /* ... */ };
+```
+
 对于这些特化,***成员函数的定义必须是一个“普通的”成员函数***，类外定义：
 
 ```cpp
