@@ -376,3 +376,33 @@ MyClass<int*, int*> m2; // match MyClass<T, T> and MyClass<T1*, T2*>
 ```
 
 对于第二个歧义例子可以特化`MyClass<T*, T*>`来解决歧义
+
+## 2.7.类模板默认参数
+
+可以为`Stack<>`模板设置第二个模板参数用来指定容器适配器
+
+```cpp
+template <typename T, typename Container = std::vector<T>>
+class Stack
+{
+private:
+  Container elems;
+  // ...
+};
+```
+
+这样一来，类外实现成员函数是就要多指定一个模板参数
+
+```cpp
+template <typename T, typename Container>
+void Stack<T, Container>::push(const T& elem)
+{
+  elems.push_back(elem);
+}
+```
+
+更改容器适配器
+
+```cpp
+Stack<double, std::deque<double>> s;
+```
