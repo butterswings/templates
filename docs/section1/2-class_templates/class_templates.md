@@ -561,3 +561,55 @@ Stack stack4 = {stringStack}; // Stack<std::string> deduced
 ```
 
 这节已经脱离主题了，原书这里很奇怪提了复制初始化但是没有对应的解释，让人费解
+
+## 2.10.模板化的聚合类型
+
+[聚合体](https://zh.cppreference.com/w/cpp/language/aggregate_initialization)
+
+一个例子：
+
+```cpp
+template <typename T>
+class ValueWithComment
+{
+  T value;
+  std::string comment;
+};
+
+ValueWithComment<int> vc;
+vc.value = 42;
+vc.comment = "initial value";
+```
+
+C++17之后，甚至可以为模板化的聚合类型定义推导指引
+
+```cpp
+ValueWithComment(const char*, const char*) -> ValueWithComment<std::string>;
+
+ValueWithComment vc2 = {"hello", "initial value"};
+```
+
+有关C++20的补充例(cppreference)：
+
+```cpp
+template<class A, class B>
+struct Agg
+{
+    A a;
+    B b;
+};
+// implicitly-generated guides are formed from default, copy, and move constructors
+ 
+template<class A, class B>
+Agg(A a, B b) -> Agg<A, B>;
+// This deduction guide can be implicitly generated in C++20
+```
+
+来自标准库的例子(要求`array`至少拥有一个元素并且后继元素类型均与第一个相同)：
+
+```cpp
+template <typename _Tp, typename... _Up>
+array(_Tp, _Up...) ->
+  array<std::enable_if_t<(std::is_same_v<_Tp, _Up> && ...), _Tp>,
+  1 + sizeof...(_Up)>
+```
