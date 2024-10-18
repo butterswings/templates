@@ -450,3 +450,114 @@ using remove_const_t = typename remove_const<_Tp>::type;
 ```
 
 这样就不必`typename remove_const<>::type`而直接`remove_const_t<>`
+
+## 2.9.模板实参推导(CTAD)
+
+C++17前，必须将所有模板参数类型传递给类模板(除非有默认值)。
+
+C++17 后，指定模板参数的约束放宽了。若构造函数能够推导出所有模板参数 (没有默认值),则可以不用显式定义模板参数
+
+- 使用拷贝构造推导
+
+```cpp
+Stack<int> s1;
+Stack s2 = s1;
+```
+
+- 使用带参数的构造函数推导
+
+```cpp
+template <typename T>
+class Stack
+{
+private:
+  std::vector<T> elems;
+
+public:
+  Stack() = default;
+
+  // will delete default constructor
+  // Stack() = default; let the compiler generate it
+  Stack(const T& elem)
+  : elems({elem}) { }
+  
+  // ...
+};
+
+Stack s = 0; // Stack<int>
+```
+
+> [!NOTE]
+> 与函数模板不同,类模板参数不能只推导部分参数(通过显式地只指定部分模板参数)
+
+- 字符串字面量推导类模板实参
+
+```cpp
+// Stack(const T&)
+Stack s = "test";
+```
+
+根据构造函数参数`const T&`，此处通过模板实参推导会推导为`Stack<char[5]>`，按引用推导类型不会`decay`
+
+很明显，这是不可取的，因为字符串的长度各不相同，所以按照值推导进行`decay`
+
+```cpp
+// Stack(T)
+Stack s = "test"; // Stack<const char*>
+```
+
+- 推导指引(deduction guide)
+
+  接上文，容器如果要处理指针，这将是非常棘手的，应该禁止容器类模板推导出指针实参
+
+  更好的做法是对该推导进行修复，直接进行从指针到如标准库类型`std::string`的推导
+
+```cpp
+Stack(const char*) -> Stack<std::string>
+```
+
+> [!NOTE]
+> 该指引必须和类定义处在相同作用域
+
+至此模板实参推导已经按照期望正常推导
+
+```cpp
+Stack s{"test"}; // Stack<std::string>
+```
+
+但是如果使用=进行初始化会有些不同
+
+```cpp
+Stack s1 = "test"; // ERROR
+Stack s2 = {"test"}; // OK
+```
+
+> `error: conversion from 'const char [5]' to non-scalar type 'Stack<std::string>' requested`
+
+第一行实际上是复制初始化，根据cppreference，复制初始化中的隐式转换必须从初始化器直接生成T并且要求非explicit
+
+请求从`const char[5]`向`Stack<std::string>`的复制构造，但是要先从`const char[5]`转换构造出一个`std::string`然后再交由`Stack<std::string>`，必须直接得到`Stack<std::string>`，这显然是不可能的
+
+```cpp
+Stack s = "test"s; // OK
+```
+
+而第二行事实上是复制列表初始化，复制列表初始化（考虑explicit和非explicit构造函数，但只能调用非explicit构造函数）
+
+- [初始化](https://en.cppreference.com/w/cpp/language/initialization)
+
+- [复制初始化](https://en.cppreference.com/w/cpp/language/copy_initialization)
+
+- [列表初始化](https://en.cppreference.com/w/cpp/language/list_initialization)
+
+对于拷贝操作，没有上面这种奇怪的行为，也没有推导成`Stack<Stack<std::string>>`
+
+> 当从类模板的某个特化类型的单个实参进行的初始化有问题时，通常与默认的包装相比，更偏好复制推导 --cppreference
+
+```cpp
+Stack stack2{stringStack}; // Stack<std::string> deduced
+Stack stack3(stringStack); // Stack<std::string> deduced
+Stack stack4 = {stringStack}; // Stack<std::string> deduced
+```
+
+这节已经脱离主题了，原书这里很奇怪提了复制初始化但是没有对应的解释，让人费解
