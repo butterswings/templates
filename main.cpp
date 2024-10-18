@@ -1,9 +1,8 @@
 #include <iostream>
-#include <boost/mpl/vector.hpp>
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
-  using type = boost::mpl::vector<int>;
+  /* here to test code in docs */
 
   return 0;
 }
