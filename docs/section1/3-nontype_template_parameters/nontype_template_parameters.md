@@ -116,3 +116,83 @@ int main()
 1. 声明外部链接的变量的方法是在代码块外面声明它。此变量是全局变量，多文件中亦可用
 2. 声明内部链接的变量的方法是在代码块外面声明它并加上static限定符. 此变量是全局变量，但仅在本文件中可用
 3. 声明无链接的变量的方法是在代码块里面声明它并加上static限定符. 此变量是局部变量，但仅在本代码块中可用
+
+## 3.4.模板参数类型`auto`
+
+Since C++17，可以推导非类型模板参数类型
+
+```cpp
+template<typename T, auto Maxsize>
+class Stack {
+public:
+  using size_type = decltype(Maxsize);
+private:
+  std::array<T,Maxsize> elems; // elements
+  size_type numElems;          // current number of elements
+  // ...    
+}
+```
+
+跟前节的内容一致，只不过栈大小类型可被推导
+
+```cpp
+int main()
+{
+  Stack<int,20u>        int20Stack;     // stack of up to 20 ints
+  Stack<std::string,40> stringStack;    // stack of up to 40 strings
+
+  // manipulate stack of up to 20 ints
+  int20Stack.push(7);
+  std::cout << int20Stack.top() << '\n';
+  auto size1 = int20Stack.size();
+
+  // manipulate stack of up to 40 strings
+  stringStack.push("hello");
+  std::cout << stringStack.top() << '\n';
+  auto size2 = stringStack.size();
+
+  if (!std::is_same_v<decltype(size1), decltype(size2)>) {
+    std::cout << "size types differ" << '\n';
+  }
+}
+```
+
+很明显地可以看到，`int20Stack`的`size_type`为`unsigned`，而`stringStack`为`int`
+
+before C++20，使用浮点仍然受限
+
+```cpp
+Stack<int, 3.14> s; // ERROR
+```
+
+传递无链接性的字符数组(C++17)
+
+```cpp
+template<auto T>       // take value of any possible nontype parameter (since C++17)
+class Message {
+  public:
+    void print() {
+      std::cout << T << '\n'; 
+    }
+};
+
+int main()
+{
+  Message<42> msg1;
+  msg1.print();        // initialize with int 42 and print that value
+
+  static char const s[] = "hello";
+  Message<s> msg2;     // initialize with char~const[6] "hello"
+  msg2.print();        // and print that value
+}
+```
+
+`decltype(auto)`也可以作为占位符，区别在于`auto`与`decltype`推导的不同
+
+```cpp
+template <decltype(auto) N>
+class C { /* ... */ };
+
+int i;
+C<(i)> c; // type N deduced int&
+```
