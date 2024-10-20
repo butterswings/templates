@@ -206,3 +206,185 @@ public:
 ```
 
 可变参数推导规则与一般模板参数推导一致
+
+## 4.4.可变参数类模板及其表达式
+
+形参包可以出现在其他地方，如表达式、类模板、using声明，甚至是推导指引
+
+> ps：这不是很正常吗，原书大呼小叫的
+
+### 4.4.1.表达式
+
+- printDouble，累加形参包每个元素
+
+```cpp
+template <typename T>
+void print(const T& arg)
+{
+  std::cout << arg << std::endl;
+}
+
+template <typename T, typename... Ts>
+void print(const T& arg, const Ts&... args)
+{
+  print(arg);
+  print(args...);
+}
+
+template <typename... Ts>
+void printDouble(const Ts&... args)
+{
+  print((args + args)...);
+}
+
+int main(int argc, char **argv)
+{
+  printDouble(1, 2.0, std::string("hello world"));
+
+  return 0;
+}
+```
+
+- 对形参包中的元素每个加一
+
+```cpp
+template <typename... Ts>
+void addOne(const Ts&... args)
+{
+  print((args + 1)...);
+}
+```
+
+- 判断形参包参数类型是否全部一致
+
+```cpp
+template <typename T, typename... Ts>
+constexpr bool isHomogeneous(T, Ts...)
+{
+  return (std::is_same<T, Ts>::value && ...);
+}
+```
+
+### 4.4.2.可变参数索引
+
+```cpp
+template <typename Container, typename... Idx>
+void printElems(const Container& c, Idx... idx)
+{
+  print(c[idx]...);
+}
+```
+
+```cpp
+// in main
+  printElems(std::vector{1, 2, 3}, 1, 0, 2);
+```
+
+在模板实参指定索引，前置索引形参包即可
+
+```cpp
+template <std::size_t...idx, typename Container>
+void printElems(const Container& c)
+{
+  print(c[idx]...);
+}
+
+int main(int argc, char **argv)
+{
+  printElems<2, 0, 1>(std::vector{1, 2, 3});
+
+  return 0;
+}
+```
+
+### 4.4.3.可变参数类模板
+
+- std::tuple
+
+```cpp
+template <typename... _Elements>
+class tuple { /* ... */ };
+```
+
+- std::variant
+
+```cpp
+template <typename... _Types>
+class variant { /* ... */ }; 
+```
+
+- integer_sequence
+
+```cpp
+template <typename _Tp, _Tp... _Idx>
+struct integer_sequence { /* ... */ };
+```
+
+使用示例：
+
+```cpp
+template <typename _Tuple_like, std::size_t... _Idx>
+void printById(_Tuple_like t, std::index_sequence<_Idx...>)
+{
+  print(std::get<_Idx>(t)...);
+}
+
+int main(int argc, char **argv)
+{
+  printById(std::tuple{1, 2.0}, std::index_sequence<1, 0>{ });
+
+  return 0;
+}
+```
+
+一般来说满足概念`tuple_like`都可以使用`index_sequence`和`std::get`按索引访问
+
+### 4.4.4.可变参数的推导指引
+
+[第二章最后array的推导指引](https://github.com/butterswings/templates/blob/main/docs/section1/2-class_templates/class_templates.md#210%E6%A8%A1%E6%9D%BF%E5%8C%96%E7%9A%84%E8%81%9A%E5%90%88%E7%B1%BB%E5%9E%8B)
+
+### 4.4.5.可变参数基类和using
+
+通过mixin（一种C++独有的设计模式），模板类继承其所有的模板参数，公用重载集
+
+```cpp
+class Customer
+{
+  private:
+    std::string name;
+  public:
+    Customer(std::string const& n) : name(n) { }
+    std::string getName() const { return name; }
+};
+
+struct CustomerEq {
+    bool operator() (Customer const& c1, Customer const& c2) const {
+      return c1.getName() == c2.getName();
+    }
+};
+
+struct CustomerHash {
+    std::size_t operator() (Customer const& c) const {
+      return std::hash<std::string>()(c.getName());
+    }
+};
+
+// define class that combines operator() for variadic base classes:
+template<typename... Bases>
+struct Overloader : Bases...
+{
+    using Bases::operator()...;  // OK since C++17
+};
+
+int main()
+{
+  // combine hasher and equality for customers in one type:
+  using CustomerOP = Overloader<CustomerHash,CustomerEq>;
+
+  std::unordered_set<Customer,CustomerHash,CustomerEq> coll1;
+  std::unordered_set<Customer,CustomerOP,CustomerOP> coll2;   
+  //...
+}
+```
+
+如上述代码，可以将散列的比较和hash函数对象均置为`CustomerOP`，而不必分别提供
